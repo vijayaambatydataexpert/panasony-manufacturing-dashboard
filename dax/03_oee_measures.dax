@@ -1,0 +1,113 @@
+-- ============================================================
+-- PanaSony Manufacturing Dashboard
+-- DAX Measures: OEE Analysis Domain
+-- Version: 1.0 | March 2026
+-- Table: Production Analytics
+-- ============================================================
+
+-- Avg Downtime %
+Avg Downtime % =
+ROUND(
+    DIVIDE(
+        SUM('Production Analytics'[DowntimeHours]) * 100,
+        SUM('Production Analytics'[ProductionHours]),
+        0
+    ), 2
+)
+
+-- Avg Plant Efficiency % (row-level then averaged)
+Avg Plant Efficiency % =
+AVERAGEX(
+    'Production Analytics',
+    DIVIDE(
+        'Production Analytics'[ProductionHours]
+            - 'Production Analytics'[DowntimeHours],
+        'Production Analytics'[ProductionHours],
+        0
+    )
+) * 100
+
+-- Total Downtime Hours
+Total Downtime Hours =
+ROUND(SUM('Production Analytics'[DowntimeHours]), 1)
+
+-- Downtime Hours label with suffix
+DT Hours Label =
+FORMAT(
+    ROUND(SUM('Production Analytics'[DowntimeHours]), 1),
+    "#,##0.0"
+) & "h"
+
+-- Total Production Hours
+Total Production Hours =
+ROUND(SUM('Production Analytics'[ProductionHours]), 0)
+
+-- Best OEE Factory (highest efficiency)
+Best OEE Factory =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[FactoryName],
+        "FEff",
+        AVERAGEX(
+            'Production Analytics',
+            DIVIDE(
+                'Production Analytics'[ProductionHours]
+                    - 'Production Analytics'[DowntimeHours],
+                'Production Analytics'[ProductionHours],
+                0
+            )
+        ) * 100
+    )
+VAR MaxEff = MAXX(Summary, [FEff])
+RETURN
+    MAXX(
+        FILTER(Summary, [FEff] = MaxEff),
+        'Production Analytics'[FactoryName]
+    )
+
+-- Worst Downtime Factory
+Worst Downtime Factory =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[FactoryName],
+        "FDT",
+        DIVIDE(
+            SUM('Production Analytics'[DowntimeHours]) * 100,
+            SUM('Production Analytics'[ProductionHours]),
+            0
+        )
+    )
+VAR MaxDT = MAXX(Summary, [FDT])
+RETURN
+    MAXX(
+        FILTER(Summary, [FDT] = MaxDT),
+        'Production Analytics'[FactoryName]
+    )
+
+-- Efficiency Status badge text
+Efficiency Status =
+IF(
+    [Avg Plant Efficiency %] >= 85,
+    "CHECK On Target",
+    "CROSS Below Target"
+)
+
+-- Downtime Status badge text
+Downtime Status =
+VAR DT = [Avg Downtime %]
+RETURN
+    IF(DT <= 10,  "CHECK On Target",
+    IF(DT <= 15,  "WARNING Above Target",
+    "CRITICAL Far Above Target"))
+
+-- OEE Star Rating text (for scorecard table)
+OEE Star Rating =
+VAR Eff = [Avg Plant Efficiency %]
+RETURN
+    IF(Eff >= 85.5, "5 Stars",
+    IF(Eff >= 85.0, "4 Stars",
+    IF(Eff >= 84.5, "3 Stars",
+    IF(Eff >= 84.0, "2 Stars",
+    "1 Star"))))
