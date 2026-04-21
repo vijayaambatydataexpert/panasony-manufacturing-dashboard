@@ -1,0 +1,82 @@
+-- ============================================================
+-- PanaSony Manufacturing Dashboard
+-- DAX Measures: Quality Domain
+-- Version: 1.0 | March 2026
+-- Table: Production Analytics
+-- ============================================================
+
+-- Avg Yield % (using pre-calculated column)
+Avg Yield % =
+AVERAGE('Production Analytics'[YieldPct])
+
+-- Avg Yield % (calculated from raw columns — more accurate)
+Avg Yield % (Calc) =
+DIVIDE(
+    SUM('Production Analytics'[GoodUnits]),
+    SUM('Production Analytics'[ProductionVolume]),
+    0
+) * 100
+
+-- Avg Scrap % (using pre-calculated column)
+Avg Scrap % =
+AVERAGE('Production Analytics'[ScrapPct])
+
+-- Avg Scrap % (calculated from raw columns)
+Avg Scrap % (Calc) =
+DIVIDE(
+    SUM('Production Analytics'[ScrapUnits]),
+    SUM('Production Analytics'[ProductionVolume]),
+    0
+) * 100
+
+-- Total Good Units
+Total Good Units =
+SUM('Production Analytics'[GoodUnits])
+
+-- Total Scrap Units
+Total Scrap Units =
+SUM('Production Analytics'[ScrapUnits])
+
+-- Quality Grade per factory (A/B/C/D)
+Quality Grade =
+VAR Yield = [Avg Yield % (Calc)]
+RETURN
+    IF(Yield >= 94, "A",
+    IF(Yield >= 93.8, "B",
+    IF(Yield >= 93.5, "C", "D")))
+
+-- Best Quality Factory
+Best Quality Factory =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[FactoryName],
+        "FYield",
+        DIVIDE(
+            SUM('Production Analytics'[GoodUnits]),
+            SUM('Production Analytics'[ProductionVolume]),
+            0
+        ) * 100
+    )
+VAR TopYield = MAXX(Summary, [FYield])
+RETURN
+    MAXX(
+        FILTER(Summary, [FYield] = TopYield),
+        'Production Analytics'[FactoryName]
+    )
+
+-- Yield Status text
+Yield Status =
+VAR Y = [Avg Yield % (Calc)]
+RETURN
+    IF(Y >= 95, "CHECK On Target",
+    IF(Y >= 90, "WARNING Monitor",
+    "CRITICAL Below Target"))
+
+-- Scrap Status text
+Scrap Status =
+VAR S = [Avg Scrap % (Calc)]
+RETURN
+    IF(S <= 5,  "CHECK On Target",
+    IF(S <= 10, "WARNING Monitor",
+    "CRITICAL Excess Scrap"))
