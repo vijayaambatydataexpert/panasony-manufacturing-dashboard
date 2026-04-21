@@ -1,0 +1,103 @@
+-- ============================================================
+-- PanaSony Manufacturing Dashboard
+-- DAX Measures: Throughput Analysis Domain
+-- Version: 1.0 | March 2026
+-- Table: Production Analytics
+-- ============================================================
+
+-- Avg Units Per Production Hour (UPH)
+Avg UPH =
+AVERAGE('Production Analytics'[UnitsPerProductionHour])
+
+-- Avg UPH calculated from raw columns
+Avg UPH (Calc) =
+DIVIDE(
+    SUM('Production Analytics'[ProductionVolume]),
+    SUM('Production Analytics'[ProductionHours]),
+    0
+)
+
+-- Avg Good Units Per Hour (GUPH)
+Avg GUPH =
+AVERAGE('Production Analytics'[GoodUnitsPerHour])
+
+-- Avg GUPH calculated from raw columns
+Avg GUPH (Calc) =
+DIVIDE(
+    SUM('Production Analytics'[GoodUnits]),
+    SUM('Production Analytics'[ProductionHours]),
+    0
+)
+
+-- Efficiency Ratio % (GUPH / UPH)
+Efficiency Ratio % =
+DIVIDE([Avg GUPH (Calc)], [Avg UPH (Calc)], 0) * 100
+
+-- Portfolio Average UPH (ignores factory filter — used for banding)
+Portfolio Avg UPH =
+CALCULATE(
+    DIVIDE(
+        SUM('Production Analytics'[ProductionVolume]),
+        SUM('Production Analytics'[ProductionHours]),
+        0
+    ),
+    ALL('Production Analytics'[FactoryName])
+)
+
+-- Throughput Band per factory (HIGH / AVG / LOW)
+Throughput Band =
+VAR FactoryUPH   = [Avg UPH (Calc)]
+VAR PortfolioUPH = [Portfolio Avg UPH]
+RETURN
+    IF(FactoryUPH >= PortfolioUPH * 1.1, "HIGH",
+    IF(FactoryUPH >= PortfolioUPH * 0.9, "AVG",
+    "LOW"))
+
+-- Best Throughput Factory (highest UPH)
+Best Throughput Factory =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[FactoryName],
+        "FUPH",
+        DIVIDE(
+            SUM('Production Analytics'[ProductionVolume]),
+            SUM('Production Analytics'[ProductionHours]),
+            0
+        )
+    )
+VAR MaxUPH = MAXX(Summary, [FUPH])
+RETURN
+    MAXX(
+        FILTER(Summary, [FUPH] = MaxUPH),
+        'Production Analytics'[FactoryName]
+    )
+
+-- Peak Year for throughput (highest avg UPH year)
+Peak Year UPH =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[YearNumber],
+        "YrUPH",
+        AVERAGE('Production Analytics'[UnitsPerProductionHour])
+    )
+VAR MaxUPH = MAXX(Summary, [YrUPH])
+RETURN
+    MAXX(
+        FILTER(Summary, [YrUPH] = MaxUPH),
+        'Production Analytics'[YearNumber]
+    )
+
+-- UPH vs Portfolio gap (for KPI card delta)
+UPH vs Portfolio Gap =
+[Avg UPH (Calc)] - [Portfolio Avg UPH]
+
+-- UPH gap label
+UPH Gap Label =
+VAR Gap = [UPH vs Portfolio Gap]
+RETURN
+    IF(Gap >= 0,
+        "+" & FORMAT(Gap, "0.00") & " vs avg",
+        FORMAT(Gap, "0.00") & " vs avg"
+    )
