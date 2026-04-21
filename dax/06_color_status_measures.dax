@@ -1,0 +1,137 @@
+-- ============================================================
+-- PanaSony Manufacturing Dashboard
+-- DAX Measures: Conditional Color & Status Domain
+-- Version: 1.0 | March 2026
+-- Brand Colors:
+--   Teal    #10D9A0  (Good / On Target)
+--   Amber   #F5A623  (Warning / Monitor)
+--   Crimson #F0476A  (Critical / Below Target)
+--   Violet  #6C3FE8  (Primary brand)
+--   Cyan    #0EAFF0  (Informational)
+--   Indigo  #3B2F8F  (Throughput / headings)
+-- ============================================================
+
+-- ── YIELD COLOR ──────────────────────────────────────────────
+
+Yield Color =
+VAR Y = [Avg Yield % (Calc)]
+RETURN
+    IF(Y >= 95,  "#10D9A0",
+    IF(Y >= 90,  "#F5A623",
+                 "#F0476A"))
+
+Yield Font Color =
+VAR Y = [Avg Yield % (Calc)]
+RETURN
+    IF(Y >= 95,  "#0a3d2e",
+    IF(Y >= 90,  "#3d2a05",
+                 "#3d0a1a"))
+
+-- ── SCRAP COLOR ───────────────────────────────────────────────
+
+Scrap Color =
+VAR S = [Avg Scrap % (Calc)]
+RETURN
+    IF(S <= 5,   "#10D9A0",
+    IF(S <= 10,  "#F5A623",
+                 "#F0476A"))
+
+-- ── QUALITY GRADE COLOR ───────────────────────────────────────
+
+Grade BG Color =
+SWITCH([Quality Grade],
+    "A", "#10D9A0",
+    "B", "#F5A623",
+    "C", "#F0476A",
+    "D", "#F0476A",
+    "#CCCCCC"
+)
+
+Grade Font Color =
+SWITCH([Quality Grade],
+    "A", "#0a3d2e",
+    "B", "#3d2a05",
+    "C", "#3d0a1a",
+    "D", "#3d0a1a",
+    "#333333"
+)
+
+-- ── OEE / EFFICIENCY COLOR ────────────────────────────────────
+
+Efficiency Color =
+VAR E = [Avg Plant Efficiency %]
+RETURN
+    IF(E >= 90,  "#10D9A0",
+    IF(E >= 80,  "#F5A623",
+                 "#F0476A"))
+
+Downtime Color =
+VAR DT = [Avg Downtime %]
+RETURN
+    IF(DT <= 10,  "#10D9A0",
+    IF(DT <= 15,  "#F5A623",
+                  "#F0476A"))
+
+OEE Rating Color =
+VAR Eff = [Avg Plant Efficiency %]
+RETURN
+    IF(Eff >= 85.5, "#10D9A0",
+    IF(Eff >= 85.0, "#F5A623",
+                    "#F0476A"))
+
+-- ── COST COLOR ────────────────────────────────────────────────
+
+Cost Status Color =
+SWITCH([Cost Status],
+    "LOW",  "#10D9A0",
+    "MED",  "#F5A623",
+    "HIGH", "#F0476A",
+    "#CCCCCC"
+)
+
+Cost Status Font Color =
+SWITCH([Cost Status],
+    "LOW",  "#0a3d2e",
+    "MED",  "#3d2a05",
+    "HIGH", "#3d0a1a",
+    "#333333"
+)
+
+Cost Variance Color =
+VAR V = [Cost Variance $]
+RETURN
+    IF(V <= 0, "#10D9A0", "#F0476A")
+
+-- ── THROUGHPUT COLOR ─────────────────────────────────────────
+
+Throughput Band Color =
+SWITCH([Throughput Band],
+    "HIGH", "#10D9A0",
+    "AVG",  "#F5A623",
+    "LOW",  "#F0476A",
+    "#CCCCCC"
+)
+
+Throughput Band Font Color =
+SWITCH([Throughput Band],
+    "HIGH", "#0a3d2e",
+    "AVG",  "#3d2a05",
+    "LOW",  "#3d0a1a",
+    "#333333"
+)
+
+UPH Gap Color =
+VAR Gap = [UPH vs Portfolio Gap]
+RETURN
+    IF(Gap >= 0, "#10D9A0", "#F0476A")
+
+-- ── YOY CHANGE COLOR (generic reusable) ──────────────────────
+
+YoY Color =
+VAR Growth = [Volume YoY %]
+RETURN
+    IF(Growth >= 0, "#10D9A0", "#F0476A")
+
+-- ── CONDITIONAL FORMATTING HELPER ────────────────────────────
+-- Use these in Format pane → fx → Field value
+-- for any KPI card, table column, or bar chart data color
