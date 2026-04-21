@@ -1,0 +1,103 @@
+-- ============================================================
+-- PanaSony Manufacturing Dashboard
+-- DAX Measures: Cost Control Domain
+-- Version: 1.0 | March 2026
+-- Table: Production Analytics
+-- ============================================================
+
+-- Total Standard Cost (budgeted)
+Total Standard Cost =
+SUM('Production Analytics'[StandardCost])
+
+-- Total Actual Cost (realized)
+Total Actual Cost =
+SUM('Production Analytics'[ActualCost])
+
+-- Cost Variance $ (positive = over budget)
+Cost Variance $ =
+[Total Actual Cost] - [Total Standard Cost]
+
+-- Cost Variance % (portfolio level)
+Cost Variance % =
+DIVIDE(
+    [Total Actual Cost] - [Total Standard Cost],
+    [Total Standard Cost],
+    0
+) * 100
+
+-- Factory-level Variance % (use in scorecard table)
+Factory Variance % =
+DIVIDE(
+    SUM('Production Analytics'[ActualCost])
+        - SUM('Production Analytics'[StandardCost]),
+    SUM('Production Analytics'[StandardCost]),
+    0
+) * 100
+
+-- Annual Cost Variance % (for trend chart by year)
+Annual Cost Variance % =
+DIVIDE(
+    SUM('Production Analytics'[ActualCost])
+        - SUM('Production Analytics'[StandardCost]),
+    SUM('Production Analytics'[StandardCost]),
+    0
+) * 100
+
+-- Cost Status badge (LOW / MED / HIGH)
+Cost Status =
+VAR VarPct = [Factory Variance %]
+RETURN
+    IF(VarPct >= 5.1, "HIGH",
+    IF(VarPct >= 4.8, "MED",
+    "LOW"))
+
+-- Best Cost Factory (lowest variance %)
+Best Cost Factory =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[FactoryName],
+        "FVar",
+        DIVIDE(
+            SUM('Production Analytics'[ActualCost])
+                - SUM('Production Analytics'[StandardCost]),
+            SUM('Production Analytics'[StandardCost]),
+            0
+        ) * 100
+    )
+VAR MinVar = MINX(Summary, [FVar])
+RETURN
+    MAXX(
+        FILTER(Summary, [FVar] = MinVar),
+        'Production Analytics'[FactoryName]
+    )
+
+-- Worst Cost Factory (highest variance %)
+Worst Cost Factory =
+VAR Summary =
+    SUMMARIZE(
+        'Production Analytics',
+        'Production Analytics'[FactoryName],
+        "FVar",
+        DIVIDE(
+            SUM('Production Analytics'[ActualCost])
+                - SUM('Production Analytics'[StandardCost]),
+            SUM('Production Analytics'[StandardCost]),
+            0
+        ) * 100
+    )
+VAR MaxVar = MAXX(Summary, [FVar])
+RETURN
+    MAXX(
+        FILTER(Summary, [FVar] = MaxVar),
+        'Production Analytics'[FactoryName]
+    )
+
+-- Cost Variance $ label with sign
+Cost Variance Label =
+VAR V = [Cost Variance $]
+RETURN
+    IF(V >= 0,
+        "+" & FORMAT(V, "$#,##0"),
+        FORMAT(V, "$#,##0")
+    )
